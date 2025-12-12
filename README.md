@@ -9,7 +9,7 @@ conda activate raeigd
 pip install uv
 uv pip install torch==2.2.0 torchvision==0.17.0 torchaudio --index-url https://download.pytorch.org/whl/cu121
 uv pip install timm==0.9.16 accelerate==0.23.0 torchdiffeq==0.2.5 wandb
-uv pip install "numpy<2" transformers einops omegaconf
+uv pip install "numpy<2" transformers einops omegaconf efficientnet_pytorch
 ```
 下载模型（21G）, 需要设置代理
 ```shell
