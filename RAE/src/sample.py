@@ -24,45 +24,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
-def sample_one_image(class_labels, save_path, dynamic_seed):
+def sample_one_image(class_labels, save_path, dynamic_seed, misc,device,guidance_config,sample_fn,model,rae):
     # Setup PyTorch:
     torch.manual_seed(dynamic_seed)
-    torch.set_grad_enabled(False)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    rae_config, model_config, transport_config, sampler_config, guidance_config, misc, _ = parse_configs(args.config)
-    rae: RAE = instantiate_from_config(rae_config).to(device)
-    model: Stage2ModelProtocol = instantiate_from_config(model_config).to(device)
-    model.eval()  # important!
-    rae.eval()
-    shift_dim = misc.get("time_dist_shift_dim", 768 * 16 * 16)
-    shift_base = misc.get("time_dist_shift_base", 4096)
-    time_dist_shift = math.sqrt(
-        shift_dim / shift_base)
-    print(
-        f"Using time_dist_shift={time_dist_shift:.4f} = sqrt({shift_dim}/{shift_base}).")
-    transport = create_transport(
-        **transport_config['params'],
-        time_dist_shift=time_dist_shift
-    )
-    sampler = Sampler(transport)
-    mode, sampler_params = sampler_config['mode'], sampler_config['params']
-    if mode == "ODE":
-        sample_fn = sampler.sample_ode(
-            **sampler_params
-        )
-    elif mode == "SDE":
-        sample_fn = sampler.sample_sde(
-            **sampler_params,
-            # sampling_method=args.sampling_method,
-            # diffusion_form=args.diffusion_form,
-            # diffusion_norm=args.diffusion_norm,
-            # last_step=args.last_step,
-            # last_step_size=args.last_step_size,
-            # num_steps=args.num_sampling_steps,
-        )
-    else:
-        raise NotImplementedError(f"Invalid sampling mode {mode}.")
-
+    torch.cuda.manual_seed(dynamic_seed)
     num_classes = misc.get("num_classes", 1000)
     print(num_classes)
     latent_size = misc.get("latent_size", (768, 16, 16))
@@ -111,12 +76,49 @@ def sample_one_image(class_labels, save_path, dynamic_seed):
 
 
 def main(args):
+
+    torch.set_grad_enabled(False)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    rae_config, model_config, transport_config, sampler_config, guidance_config, misc, _ = parse_configs(args.config)
+    rae: RAE = instantiate_from_config(rae_config).to(device)
+    model: Stage2ModelProtocol = instantiate_from_config(model_config).to(device)
+    model.eval()  # important!
+    rae.eval()
+    shift_dim = misc.get("time_dist_shift_dim", 768 * 16 * 16)
+    shift_base = misc.get("time_dist_shift_base", 4096)
+    time_dist_shift = math.sqrt(
+        shift_dim / shift_base)
+    print(
+        f"Using time_dist_shift={time_dist_shift:.4f} = sqrt({shift_dim}/{shift_base}).")
+    transport = create_transport(
+        **transport_config['params'],
+        time_dist_shift=time_dist_shift
+    )
+    sampler = Sampler(transport)
+    mode, sampler_params = sampler_config['mode'], sampler_config['params']
+    if mode == "ODE":
+        sample_fn = sampler.sample_ode(
+            **sampler_params
+        )
+    elif mode == "SDE":
+        sample_fn = sampler.sample_sde(
+            **sampler_params,
+            # sampling_method=args.sampling_method,
+            # diffusion_form=args.diffusion_form,
+            # diffusion_norm=args.diffusion_norm,
+            # last_step=args.last_step,
+            # last_step_size=args.last_step_size,
+            # num_steps=args.num_sampling_steps,
+        )
+    else:
+        raise NotImplementedError(f"Invalid sampling mode {mode}.")
+
     for class_id in range(1000):
         save_dir = os.path.join(args.output, str(class_id))
         os.makedirs(save_dir, exist_ok=True)
         for i in range(args.ipc):
             dynamic_seed = args.seed + class_id * 1000 + i + int(time() * 1000) % 1000000
-            sample_one_image([class_id], os.path.join(save_dir, f'{i}.png'),dynamic_seed)
+            sample_one_image([class_id], os.path.join(save_dir, f'{i}.png'),dynamic_seed,misc,device,guidance_config,sample_fn,model,rae)
 
 
 
