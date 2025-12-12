@@ -76,7 +76,6 @@ def sample_one_image(class_labels, save_path, dynamic_seed, misc,device,guidance
 
 
 def main(args):
-
     torch.set_grad_enabled(False)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     rae_config, model_config, transport_config, sampler_config, guidance_config, misc, _ = parse_configs(args.config)
