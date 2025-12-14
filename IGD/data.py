@@ -982,6 +982,8 @@ def load_data(args, tsne=False):
                                   spec=args.spec)
 
         nclass = len(train_dataset.classes)
+        print("len train datasets: {}".format(len(train_dataset.classes)))
+        print("len vak datasets: {}".format(len(val_dataset.classes)))
         assert nclass == len(val_dataset.classes)
         for i in range(len(train_dataset.classes)):
             assert train_dataset.classes[i] == val_dataset.classes[i]
