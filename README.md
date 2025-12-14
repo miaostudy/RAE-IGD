@@ -18,5 +18,13 @@ pip install huggingface_hub
 hf download nyu-visionx/RAE-collections --local-dir models 
 ```
 # 实验结果
+## ImageNet
+## ResNet-10
+| method | ipc | accuracy |
+|--------|-----|---------|
+| RAE    | 10  |         |
+|        |     |         |
+
+
 
 # 改进位置

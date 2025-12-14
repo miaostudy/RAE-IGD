@@ -8,6 +8,6 @@ path=../results/dit-distillation/woof-50-dit-igd-ckpts-convnet6-k5-gamma120-r1-g
 
 python train.py -d imagenet --imagenet_dir ${path} ../imagenet/ -n ${net} --depth ${d} --nclass 1000 --norm_type instance --ipc ${ipc} --tag test --slct_type random --spec ${spec}
 
-python IGD/train.py -d imagenet --imagenet_dir ../imagenet /data2/wlf/datasets/imagenet/ -n resnet --depth 10 --nclass 1000 --norm_type instance --ipc 10 --tag test --slct_type random --spec budaoa
+python IGD/train.py -d imagenet --imagenet_dir ../imagenet /data2/wlf/datasets/imagenet/ -n resnet --depth 10 --nclass 1000 --norm_type instance --ipc 10 --tag test --slct_type random --spec 1k --epoch_print_freq 1
 
 
