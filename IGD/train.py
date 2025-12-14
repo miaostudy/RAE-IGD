@@ -17,6 +17,8 @@ from misc.utils import random_indices, rand_bbox, AverageMeter, accuracy, get_ti
 from efficientnet_pytorch import EfficientNet
 import time
 import warnings
+os.environ["http_proxy"] = "127.0.0.1:7890"
+os.environ["https_proxy"] = "127.0.0.1:7890"
 
 warnings.filterwarnings("ignore")
 model_names = sorted(
