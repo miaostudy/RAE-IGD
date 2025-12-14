@@ -1,4 +1,3 @@
-# original code: https://github.com/dyhan0920/PyramidNet-PyTorch/blob/master/train.py
 import os
 import time
 import numpy as np
@@ -15,8 +14,9 @@ import train_models.densenet_cifar as DN
 from data import load_data, MEANS, STDS
 from misc.utils import random_indices, rand_bbox, AverageMeter, accuracy, get_time, Plotter
 from efficientnet_pytorch import EfficientNet
-import time
 import warnings
+from tqdm import tqdm  # 导入tqdm进度条库
+
 os.environ["http_proxy"] = "127.0.0.1:7890"
 os.environ["https_proxy"] = "127.0.0.1:7890"
 
@@ -65,11 +65,12 @@ def define_model(args, nclass, logger=None, size=None):
                            net_depth=args.depth,
                            net_width=width,
                            channel=args.nch,
-                           im_size=(args.size, args.size))    
-        
+                           im_size=(args.size, args.size))
+
     elif args.net_type == 'convnet6':
         width = int(128 * args.width)
-        model = CN.ConvNet(channel=args.nch, num_classes=nclass, net_width=128, net_depth=6, net_act='relu', net_norm='instancenorm', net_pooling='avgpooling', im_size=(args.size, args.size))
+        model = CN.ConvNet(channel=args.nch, num_classes=nclass, net_width=128, net_depth=6, net_act='relu',
+                           net_norm='instancenorm', net_pooling='avgpooling', im_size=(args.size, args.size))
     else:
         raise Exception('unknown network architecture: {}'.format(args.net_type))
 
@@ -85,13 +86,12 @@ def main(args, logger, repeat=1):
         torch.cuda.manual_seed(args.seed)
         torch.cuda.manual_seed_all(args.seed)  # if you are using multi-GPU.
         np.random.seed(args.seed)  # Numpy module.
-        # np.random.seed(4)  # Numpy module.
         torch.backends.cudnn.deterministic = True  # Cuda module.
         torch.backends.cudnn.benchmark = False
-        
-    print('args.seed,',args.seed)
-    print('spec',args.spec)
-    cudnn.benchmark = True  
+
+    print('args.seed,', args.seed)
+    print('spec', args.spec)
+    cudnn.benchmark = True
     logger(f"ImageNet directory: {args.imagenet_dir[0]}")
     _, train_loader, val_loader, nclass = load_data(args)
 
@@ -102,7 +102,7 @@ def main(args, logger, repeat=1):
     best_acc_l = []
     acc_l = []
     for i in range(repeat):
-        logger(f"Repeat: {i+1}/{repeat}")
+        logger(f"Repeat: {i + 1}/{repeat}")
         plotter = Plotter(args.save_dir, args.epochs, idx=i)
         model = define_model(args, nclass, logger)
 
@@ -116,12 +116,7 @@ def main(args, logger, repeat=1):
 
 def train(args, model, train_loader, val_loader, plotter=None, logger=None):
     criterion = nn.CrossEntropyLoss().cuda()
-    # optimizer = optim.SGD(model.parameters(),
-    #                       args.lr,
-    #                       momentum=args.momentum,
-    #                       weight_decay=args.weight_decay)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
-    # optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
 
     scheduler = optim.lr_scheduler.MultiStepLR(
         optimizer, milestones=[2 * args.epochs // 3, 5 * args.epochs // 6], gamma=0.2)
@@ -131,7 +126,6 @@ def train(args, model, train_loader, val_loader, plotter=None, logger=None):
     if args.pretrained:
         pretrained = "{}/{}".format(args.save_dir, 'checkpoint.pth.tar')
         cur_epoch, best_acc1 = load_checkpoint(pretrained, model, optimizer)
-        # TODO: optimizer scheduler steps
 
     model = model.cuda()
     logger(f"Start training with base augmentation and {args.mixup} mixup")
@@ -194,7 +188,16 @@ def train_epoch(args,
 
     end = time.time()
     num_exp = 0
-    for i, (input, target) in enumerate(train_loader):
+
+    # 创建训练进度条
+    pbar = tqdm(enumerate(train_loader),
+                total=len(train_loader),
+                desc=f'Train Epoch {epoch}/{args.epochs}',
+                ncols=120,
+                leave=True,
+                unit='batch')
+
+    for i, (input, target) in pbar:
         if train_loader.device == 'cpu':
             input = input.cuda()
             target = target.cuda()
@@ -235,9 +238,21 @@ def train_epoch(args,
         batch_time.update(time.time() - end)
         end = time.time()
 
+        # 更新进度条显示信息
+        pbar.set_postfix({
+            'Loss': f'{losses.avg:.3f}',
+            'Top1': f'{top1.avg:.1f}%',
+            'Top5': f'{top5.avg:.1f}%',
+            'LR': f'{optimizer.param_groups[0]["lr"]:.6f}',
+            'Time': f'{batch_time.avg:.2f}s'
+        })
+
         num_exp += len(target)
         if (n_data > 0) and (num_exp >= n_data):
+            pbar.close()  # 提前结束时关闭进度条
             break
+
+    pbar.close()  # 关闭进度条
 
     if (epoch % args.epoch_print_freq == 0) and (logger is not None) and args.verbose == True:
         logger(
@@ -257,24 +272,43 @@ def validate(args, val_loader, model, criterion, epoch, logger=None):
     model.eval()
 
     end = time.time()
-    for i, (input, target) in enumerate(val_loader):
-        input = input.cuda()
-        target = target.cuda()
-        output = model(input)
 
-        loss = criterion(output, target)
+    # 创建验证进度条
+    pbar = tqdm(enumerate(val_loader),
+                total=len(val_loader),
+                desc=f'Val   Epoch {epoch}/{args.epochs}',
+                ncols=120,
+                leave=True,
+                unit='batch')
 
-        # measure accuracy and record loss
-        acc1, acc5 = accuracy(output.data, target, topk=(1, 5))
+    with torch.no_grad():  # 验证阶段禁用梯度计算
+        for i, (input, target) in pbar:
+            input = input.cuda()
+            target = target.cuda()
+            output = model(input)
 
-        losses.update(loss.item(), input.size(0))
+            loss = criterion(output, target)
 
-        top1.update(acc1.item(), input.size(0))
-        top5.update(acc5.item(), input.size(0))
+            # measure accuracy and record loss
+            acc1, acc5 = accuracy(output.data, target, topk=(1, 5))
 
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
+            losses.update(loss.item(), input.size(0))
+            top1.update(acc1.item(), input.size(0))
+            top5.update(acc5.item(), input.size(0))
+
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
+
+            # 更新进度条显示信息
+            pbar.set_postfix({
+                'Loss': f'{losses.avg:.3f}',
+                'Top1': f'{top1.avg:.1f}%',
+                'Top5': f'{top5.avg:.1f}%',
+                'Time': f'{batch_time.avg:.2f}s'
+            })
+
+    pbar.close()  # 关闭进度条
 
     if logger is not None and args.verbose == True:
         logger(
@@ -324,15 +358,15 @@ if __name__ == '__main__':
 
     # seeds = list(range(5)) 
     seeds = list(range(5))
-    print('seeds:',seeds)
+    print('seeds:', seeds)
     accs = []
     for s in seeds:
         args.seed = s
         cur_best = main(args, logger, args.repeat)
         accs.append(cur_best)
-    
+
     print('###########################')
     print(args.imagenet_dir[0])
-    print('spec: %s, net: %s, depth: %s, ipc: %s:'%(args.spec,args.net_type,args.depth,args.ipc))
-    print('mean: %s, std: %s'%(np.mean(accs), np.std(accs)))
+    print('spec: %s, net: %s, depth: %s, ipc: %s:' % (args.spec, args.net_type, args.depth, args.ipc))
+    print('mean: %s, std: %s' % (np.mean(accs), np.std(accs)))
     print('###########################')
