@@ -119,7 +119,7 @@ def main(args):
     else:
         raise NotImplementedError(f"Invalid sampling mode {mode}.")
 
-    output = os.path.join(args.output, str(args.ipc))
+    output = os.path.join(args.output, f'ipc_{args.ipc}')
 
     for class_id in range(1000):
         save_dir = os.path.join(output, str(classes_name[class_id]))
