@@ -20,11 +20,19 @@ hf download nyu-visionx/RAE-collections --local-dir models
 # 实验结果
 ## ImageNet
 ## ResNet-10
-| method | ipc | accuracy |
-|--------|-----|---------|
-| RAE    | 10  |         |
-|        |     |         |
+| method  | ipc | train accuracy | validate accuracy |
+|---------|-----|----------------|-------------------|
+| RAE     | 10  | 78%            |       0.5428%     |
+|         | 50  |                |                   |
+|         | 100 |                |                   |
+| IGD     | 10  |                |                   |
+|         | 50  |                |                   |
+|         | 100 |                |                   |
+| RAE+IGD | 10  |                |                   |
+|         | 50  |                |                   |
+|         | 100 |                |                   |
 
-
+**RAE-IPC10**
+![curve_0.png](https://youke2.picui.cn/s1/2025/12/16/6940c018cb9aa.png)
 
 # 改进位置

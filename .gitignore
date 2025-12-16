@@ -4,3 +4,4 @@ imagenet
 IGD/misc/__pycache__
 IGD/train_models/__pycache__
 IGD/__pycache__
+IGD/pretrained_models
