@@ -9,7 +9,7 @@ conda activate raeigd
 pip install uv
 uv pip install torch==2.2.0 torchvision==0.17.0 torchaudio --index-url https://download.pytorch.org/whl/cu121
 uv pip install timm==0.9.16 accelerate==0.23.0 torchdiffeq==0.2.5 wandb
-uv pip install "numpy<2" transformers einops omegaconf efficientnet_pytorch matplotlib
+uv pip install "numpy<2" transformers einops omegaconf efficientnet_pytorch matplotlib diffusers
 ```
 下载模型（21G）, 需要设置代理
 ```shell
@@ -33,6 +33,9 @@ hf download nyu-visionx/RAE-collections --local-dir models
 |         | 100 |                |                   |
 
 **RAE-IPC10**
+```shell
+python IGD/train.py -d imagenet --imagenet_dir imagenet/ipc_50/ /data2/wlf/datasets/imagenet/ -n resnet --depth 10 --nclass 1000 --norm_type instance --ipc 50 --tag test --slct_type random --spec 1k --batch_size 128 --verbose
+```
 ![curve_0.png](https://youke2.picui.cn/s1/2025/12/16/6940c018cb9aa.png)
 
 # 改进位置

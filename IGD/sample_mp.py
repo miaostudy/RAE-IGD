@@ -246,7 +246,7 @@ def main(args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Labels to condition the model
-    with open('./misc/class_indices.txt', 'r') as fp:
+    with open('IGD/misc/class_indices.txt', 'r') as fp:
         all_classes = fp.readlines()
     all_classes = [class_index.strip() for class_index in all_classes]
     if args.spec == 'woof':
