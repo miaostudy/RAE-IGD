@@ -24,8 +24,8 @@ python IGD/download.py
 ## ResNet-10
 | method  | ipc | train accuracy | validate accuracy |
 |---------|-----|----------------|-------------------|
-| RAE     | 10  | 78%            |       0.5428%     |
-|         | 50  |                |                   |
+| RAE     | 10  | 78%            | 0.5428%           |
+|         | 50  | 69.4           | 31%               |
 |         | 100 |                |                   |
 | IGD     | 10  |                |                   |
 |         | 50  |                |                   |

@@ -13,8 +13,8 @@ exp_name="train_tokenizer"
 log_dir=./exps/
 freeze_encoder=True
 freeze_mlp=False
-lpips_path=./ckpt_vae/vgg.pth
-dataset_path=./data/ImageNet
+lpips_path=./DMVAE/ckpt_vae/vgg.pth
+dataset_path=/data2/wlf/datasets/ImageNet
 epoch=10 # 10 is recommended for tokenizer pretraining, 50 is recommended for decoder fine-tuning
 
 torchrun \
