@@ -15,13 +15,10 @@ import train_models.densenet_cifar as DN
 from data import load_data, MEANS, STDS
 from misc.utils import random_indices, rand_bbox, AverageMeter, accuracy, get_time, Plotter
 from efficientnet_pytorch import EfficientNet
+import time
 import warnings
-from tqdm import tqdm, trange  # 新增：导入tqdm进度条库
 
-device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
-os.environ['CUDA_VISIBLE_DEVICES'] = "1"
 warnings.filterwarnings("ignore")
-
 model_names = sorted(
     name for name in models.__dict__
     if name.islower() and not name.startswith("__") and callable(models.__dict__[name]))
@@ -29,15 +26,15 @@ model_names = sorted(
 mean_torch = {}
 std_torch = {}
 for key, val in MEANS.items():
-    mean_torch[key] = torch.tensor(val, device=device).reshape(1, len(val), 1, 1)
+    mean_torch[key] = torch.tensor(val, device='cuda').reshape(1, len(val), 1, 1)
 for key, val in STDS.items():
-    std_torch[key] = torch.tensor(val, device=device).reshape(1, len(val), 1, 1)
+    std_torch[key] = torch.tensor(val, device='cuda').reshape(1, len(val), 1, 1)
 
 
 def define_model(args, nclass, logger=None, size=None):
     """Define neural network models
     """
-    if size is None:
+    if size == None:
         size = args.size
 
     if args.net_type == 'resnet':
@@ -60,16 +57,12 @@ def define_model(args, nclass, logger=None, size=None):
     elif args.net_type == 'densenet':
         model = DN.densenet_cifar(nclass)
     elif args.net_type == 'convnet':
-        model = CN.ConvNet(channel=args.nch, num_classes=nclass, net_width=128, net_depth=3,
-                           net_act='relu', net_norm='instancenorm', net_pooling='avgpooling',
-                           im_size=(args.size, args.size))
-    elif args.net_type == 'convnet6':
-        model = CN.ConvNet(channel=args.nch, num_classes=nclass, net_width=128, net_depth=6,
-                           net_act='relu', net_norm='instancenorm', net_pooling='avgpooling',
-                           im_size=(args.size, args.size))
-    elif args.net_type == 'convnet4':
-        model = CN.ConvNet(channel=args.nch, num_classes=nclass, net_width=128, net_depth=4,
-                           net_act='relu', net_norm='instancenorm', net_pooling='avgpooling',
+        width = int(128 * args.width)
+        model = CN.ConvNet(nclass,
+                           net_norm=args.norm_type,
+                           net_depth=args.depth,
+                           net_width=width,
+                           channel=args.nch,
                            im_size=(args.size, args.size))
     else:
         raise Exception('unknown network architecture: {}'.format(args.net_type))
@@ -88,103 +81,79 @@ def main(args, logger, repeat=1):
 
     cudnn.benchmark = True
     logger(f"ImageNet directory: {args.imagenet_dir[0]}")
-    print('spec:', args.spec)
-
-    # 加载数据
     _, train_loader, val_loader, nclass = load_data(args)
 
     best_acc_l = []
     acc_l = []
-    global trajectories # 训练轨迹
-    trajectories = []
-
-    for i in tqdm(range(repeat), desc="Total Training Repeats", leave=True, unit="repeat"):
-        logger(f"Repeat: {i + 1}/{repeat}")
+    for i in range(repeat):
+        logger(f"Repeat: {i+1}/{repeat}")
         plotter = Plotter(args.save_dir, args.epochs, idx=i)
-
         model = define_model(args, nclass, logger)
-        tqdm.write('Define model completed')  # 不覆盖进度条的打印
 
-        # 训练，timestamps是每一个epoch的模型参数
-        best_acc, acc, timestamps = train(args, model, train_loader, val_loader, plotter, logger)
-        trajectories.append(timestamps)
+        best_acc, acc = train(args, model, train_loader, val_loader, plotter, logger)
         best_acc_l.append(best_acc)
         acc_l.append(acc)
-        # save_interval默认是1，即只有repeat = 1的时候才会保存ckpt。
-        if len(trajectories) == args.save_interval:
-            n = int(args.start) # start = 0
-            while os.path.exists(os.path.join(args.ckpt_dir, "replay_buffer_{}.pt".format(n))):
-                n += 1
-            save_path = os.path.join(args.ckpt_dir, "replay_buffer_{}.pt".format(n))
-            tqdm.write(f"Saving trajectory to {save_path}")
-            torch.save(trajectories, save_path)
-            trajectories = []
 
-    avg_best = np.mean(best_acc_l)
-    std_best = np.std(best_acc_l)
-    avg_last = np.mean(acc_l)
-    std_last = np.std(acc_l)
-    print(
-        f'\n(expert {repeat}) Best acc: {avg_best:.1f} ± {std_best:.1f} | Last acc: {avg_last:.1f} ± {std_last:.1f}')
+    logger(f'\n(Repeat {repeat}) Best, last acc: {np.mean(best_acc_l):.1f} {np.std(best_acc_l):.1f}')
 
 
 def train(args, model, train_loader, val_loader, plotter=None, logger=None):
-    criterion = nn.CrossEntropyLoss().to(device) # 交叉熵
+    criterion = nn.CrossEntropyLoss().cuda()
     optimizer = optim.SGD(model.parameters(),
                           args.lr,
                           momentum=args.momentum,
                           weight_decay=args.weight_decay)
 
+    scheduler = optim.lr_scheduler.MultiStepLR(
+        optimizer, milestones=[2 * args.epochs // 3, 5 * args.epochs // 6], gamma=0.2)
+
+    # Load pretrained
     cur_epoch, best_acc1, best_acc5, acc1, acc5 = 0, 0, 0, 0, 0
-    # 如果有预训练模型的话
     if args.pretrained:
         pretrained = "{}/{}".format(args.save_dir, 'checkpoint.pth.tar')
         cur_epoch, best_acc1 = load_checkpoint(pretrained, model, optimizer)
+        # TODO: optimizer scheduler steps
 
-    model = model.to(device)
+    model = model.cuda()
     logger(f"Start training with base augmentation and {args.mixup} mixup")
 
-    timestamps = []
-    timestamps.append([p.detach().cpu() for p in model.parameters()]) # 模型初始参数
-    args.epoch_print_freq = 1
+    # Start training and validation
+    for epoch in range(cur_epoch + 1, args.epochs + 1):
+        acc1_tr, _, loss_tr = train_epoch(args,
+                                          train_loader,
+                                          model,
+                                          criterion,
+                                          optimizer,
+                                          epoch,
+                                          logger,
+                                          mixup=args.mixup)
 
-    print(f'epoch: {cur_epoch}/{args.epochs}')
-    epoch_range = trange(cur_epoch + 1, args.epochs + 1, desc="Training Epochs", leave=True, unit="epoch")
-    for epoch in epoch_range:
-        acc1_tr, top5_tr, loss_tr = train_epoch(args,
-                                                train_loader,
-                                                model,
-                                                criterion,
-                                                optimizer,
-                                                epoch,
-                                                logger,
-                                                mixup=args.mixup)
-
-        timestamps.append([p.detach().cpu() for p in model.parameters()]) # 训练了一个epoch后的模型参数
-
-        # 验证一下模型
         if epoch % args.epoch_print_freq == 0:
             acc1, acc5, loss_val = validate(args, val_loader, model, criterion, epoch, logger)
-            tqdm.write(f'Epoch {epoch} | Val Top1: {acc1:.2f}% | Val Loss: {loss_val:.4f}')
 
-            if plotter is not None:
+            if plotter != None:
                 plotter.update(epoch, acc1_tr, acc1, loss_tr, loss_val)
 
             is_best = acc1 > best_acc1
             if is_best:
                 best_acc1 = acc1
                 best_acc5 = acc5
-                if logger is not None and args.verbose == True:
-                    logger(f'Best accuracy (top-1/5): {best_acc1:.1f} / {best_acc5:.1f}')
+                if logger != None and args.verbose == True:
+                    logger(f'Best accuracy (top-1 and 5): {best_acc1:.1f} {best_acc5:.1f}')
 
-            epoch_range.set_postfix({
-                'Best Val Top1': f'{best_acc1:.2f}%',
-                'Cur Val Top1': f'{acc1:.2f}%',
-                'Train Loss': f'{loss_tr:.4f}',
-                'Val Loss': f'{loss_val:.4f}'
-            })
+        if args.save_ckpt and (is_best or (epoch == args.epochs)):
+            state = {
+                'epoch': epoch,
+                'arch': args.net_type,
+                'state_dict': model.state_dict(),
+                'best_acc1': best_acc1,
+                'best_acc5': best_acc5,
+                'optimizer': optimizer.state_dict(),
+            }
+            save_checkpoint(args.save_dir, state, is_best)
+        scheduler.step()
 
-    return best_acc1, acc1, timestamps
+    return best_acc1, acc1
 
 
 def train_epoch(args,
@@ -203,60 +172,52 @@ def train_epoch(args,
     top5 = AverageMeter()
 
     model.train()
+
     end = time.time()
     num_exp = 0
-
-    train_pbar = tqdm(enumerate(train_loader),
-                      desc=f"Epoch {epoch} Train",
-                      total=len(train_loader),
-                      leave=False,
-                      unit="batch")
-
-    for i, (input, target) in train_pbar:
+    for i, (input, target) in enumerate(train_loader):
         if train_loader.device == 'cpu':
-            input = input.to(device)
-            target = target.to(device)
+            input = input.cuda()
+            target = target.cuda()
 
         data_time.update(time.time() - end)
 
         r = np.random.rand(1)
         if r < args.mix_p and mixup == 'cut':
+            # generate mixed sample
             lam = np.random.beta(args.beta, args.beta)
             rand_index = random_indices(target, nclass=args.nclass)
+
             target_b = target[rand_index]
             bbx1, bby1, bbx2, bby2 = rand_bbox(input.size(), lam)
             input[:, :, bbx1:bbx2, bby1:bby2] = input[rand_index, :, bbx1:bbx2, bby1:bby2]
             ratio = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (input.size()[-1] * input.size()[-2]))
+
             output = model(input)
             loss = criterion(output, target) * ratio + criterion(output, target_b) * (1. - ratio)
         else:
+            # compute output
             output = model(input)
             loss = criterion(output, target)
 
+        # measure accuracy and record loss
         acc1, acc5 = accuracy(output.data, target, topk=(1, 5))
 
         losses.update(loss.item(), input.size(0))
         top1.update(acc1.item(), input.size(0))
         top5.update(acc5.item(), input.size(0))
 
+        # compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
+        # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
-        train_pbar.set_postfix({
-            'Loss': f'{losses.avg:.4f}',
-            'Top1': f'{top1.avg:.2f}%',
-            'Top5': f'{top5.avg:.2f}%',
-            'DataTime': f'{data_time.avg:.2f}s',
-            'BatchTime': f'{batch_time.avg:.2f}s'
-        })
-
         num_exp += len(target)
         if (n_data > 0) and (num_exp >= n_data):
-            train_pbar.close()
             break
 
     if (epoch % args.epoch_print_freq == 0) and (logger is not None) and args.verbose == True:
@@ -273,63 +234,50 @@ def validate(args, val_loader, model, criterion, epoch, logger=None):
     top1 = AverageMeter()
     top5 = AverageMeter()
 
+    # switch to evaluate mode
     model.eval()
+
     end = time.time()
+    for i, (input, target) in enumerate(val_loader):
+        input = input.cuda()
+        target = target.cuda()
+        output = model(input)
 
-    val_pbar = tqdm(enumerate(val_loader),
-                    desc=f"🔍 Epoch {epoch} Val",
-                    total=len(val_loader),
-                    leave=False,
-                    unit="batch")
+        loss = criterion(output, target)
 
-    with torch.no_grad():
-        for i, (input, target) in val_pbar:
-            input = input.to(device)
-            target = target.to(device)
+        # measure accuracy and record loss
+        acc1, acc5 = accuracy(output.data, target, topk=(1, 5))
 
-            output = model(input)
-            loss = criterion(output, target)
+        losses.update(loss.item(), input.size(0))
 
-            acc1, acc5 = accuracy(output.data, target, topk=(1, 5))
+        top1.update(acc1.item(), input.size(0))
+        top5.update(acc5.item(), input.size(0))
 
-            losses.update(loss.item(), input.size(0))
-            top1.update(acc1.item(), input.size(0))
-            top5.update(acc5.item(), input.size(0))
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
 
-            batch_time.update(time.time() - end)
-            end = time.time()
-
-            val_pbar.set_postfix({
-                'Val Loss': f'{losses.avg:.4f}',
-                'Val Top1': f'{top1.avg:.2f}%',
-                'Val Top5': f'{top5.avg:.2f}%',
-                'BatchTime': f'{batch_time.avg:.2f}s'
-            })
-
-    val_pbar.close()
-
-    # 打印验证日志
     if logger is not None and args.verbose == True:
         logger(
             '(Test ) [Epoch {0}/{1}] {2} Top1 {top1.avg:.1f}  Top5 {top5.avg:.1f}  Loss {loss.avg:.3f}'
             .format(epoch, args.epochs, get_time(), top1=top1, top5=top5, loss=losses))
-
     return top1.avg, top5.avg, losses.avg
 
 
 def load_checkpoint(path, model, optimizer):
     if os.path.isfile(path):
-        tqdm.write(f"=> loading checkpoint '{path}'")
-        checkpoint = torch.load(path, map_location=device)  # 指定设备，避免cuda:0
+        print("=> loading checkpoint '{}'".format(path))
+        checkpoint = torch.load(path)
         checkpoint['state_dict'] = dict(
             (key[7:], value) for (key, value) in checkpoint['state_dict'].items())
         model.load_state_dict(checkpoint['state_dict'])
         cur_epoch = checkpoint['epoch']
         best_acc1 = checkpoint['best_acc1']
         optimizer.load_state_dict(checkpoint['optimizer'])
-        tqdm.write(f"=> loaded checkpoint '{path}' (epoch: {cur_epoch}, best acc1: {best_acc1}%)")
+        print("=> loaded checkpoint '{}'(epoch: {}, best acc1: {}%)".format(
+            path, cur_epoch, checkpoint['best_acc1']))
     else:
-        tqdm.write(f"=> no checkpoint found at '{path}'")
+        print("=> no checkpoint found at '{}'".format(path))
         cur_epoch = 0
         best_acc1 = 100
 
@@ -343,14 +291,13 @@ def save_checkpoint(save_dir, state, is_best):
     else:
         ckpt_path = os.path.join(save_dir, 'checkpoint.pth.tar')
     torch.save(state, ckpt_path)
-    tqdm.write(f"Checkpoint saved! {ckpt_path}")
+    print("checkpoint saved! ", ckpt_path)
 
 
 if __name__ == '__main__':
     from misc.utils import Logger
     from argument import args
 
-    os.makedirs(args.ckpt_dir, exist_ok=True)
     os.makedirs(args.save_dir, exist_ok=True)
     logger = Logger(args.save_dir)
     logger(f"Save dir: {args.save_dir}")

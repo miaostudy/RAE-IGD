@@ -12,17 +12,34 @@ uv pip install timm==0.9.16 accelerate==0.23.0 torchdiffeq==0.2.5 wandb
 uv pip install "numpy<2" transformers einops omegaconf efficientnet_pytorch matplotlib diffusers
 pip install -r requirements.txt
 ```
-下载模型（21G）, 有一些代码运行时也需要从huggingface上下载模型，需要设置代理
+下载模型（21G）, 需要设置代理, 有一些代码运行时需要在huggingface上下载模型，需要设置代理
 ``` shell
 uv pip install huggingface_hub
 python scripts/download.py
 ```
-项目中有些文件使用了`git-lfs`进行追踪，一般情况下`git clone`时会自动下载，若未下载，请安装`git lfs`并运行
-```shell
-git lfs install
-git lfs pull
-```
-# 实验结果
+# 实验
+## Baseline
+### ImageNet1K
+这个和ImageNete、ImageWoof的设置有很大不同，不能直接沿用设置
+![](https://youke2.picui.cn/s1/2025/12/27/694fc73be2283.png)
+相关设置：
+1. 软标签生成模型：**resnet-18**
+2. 生成模型：**MiniMax**，这是一个针对数据集蒸馏任务微调过的DIT模型
+3. 采样步：50
+4. 代理模型参数：
+    ```shell
+    model:ConvNet-6
+    rl: 0.01
+    epoch: 50
+    ```
+5. 选择有代表性的检查点：代理模型的检查点不是每个epcoh都保存的，只保存“与参考checkpoint”的梯度相似度不超过**0.7**的checkpoint。计算引导Loss的时候只是用这些checkpoint
+6. $k=10$, $\gamma_t=100$
+
+代码实现与论文描述不一致的地方：
+1. 并没有实现 **Choosing representative checkpoints via gradient similarity**：
+   
+    在训练代理模型的时候，保存了完整的50个epoch的模型参数。在采样的时候直接**人为指定加载哪些epoch的参数**，比如`convnet6`就加载`idxs = [0,5,18,52]`时的代理模型参数来进行引导。
+2. 论文里各个位置说的都是训练50个epoch，在加载idx的时候加载了52。
 ## ImageNet
 ## ResNet-10
 | method  | ipc | train accuracy | validate accuracy |

@@ -24,6 +24,10 @@ import train_models.densenet_cifar as DN
 import time
 from reparam_module import ReparamModule
 import torch.nn as nn
+import os
+
+os.environ["http_proxy"] = "http://localhost:7890"
+os.environ["https_proxy"] = "https://localhost:7890"
 
 def center_crop_arr(pil_image, image_size):
     """
