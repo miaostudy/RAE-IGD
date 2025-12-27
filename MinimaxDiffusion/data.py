@@ -106,11 +106,11 @@ class ImageFolder(datasets.DatasetFolder):
         cls_to = nclass * (phase + 1)
         if seed == 0:
             if self.spec == 'woof':
-                file_list = './misc/class_woof.txt'
+                file_list = './MinimaxDiffusion/misc/class_woof.txt'
             elif self.spec == 'nette':
-                file_list = './misc/class_nette.txt'
+                file_list = './MinimaxDiffusion/misc/class_nette.txt'
             else:
-                file_list = './misc/class100.txt'
+                file_list = './MinimaxDiffusion/misc/class100.txt'
             with open(file_list, 'r') as f:
                 class_name = f.readlines()
             for c in class_name:
