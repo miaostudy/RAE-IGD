@@ -6,3 +6,4 @@ IGD/train_models/__pycache__
 IGD/__pycache__
 IGD/pretrained_models
 pretrained_models
+IGD/diffusion/__pycache__/
