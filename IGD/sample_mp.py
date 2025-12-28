@@ -310,8 +310,8 @@ def main(args):
         os.makedirs(os.path.join(args.save_dir, sel_class), exist_ok=True)
         print(sel_class)
         real_gradients, cur_cls, correspond_labels  = get_grads(sel_classes, class_labels, sel_class, ckpts, surrogate)
-        # print('class_label',class_label)
-        # print('cur_cls',cur_cls)
+        print('class_label',class_label)
+        print('cur_cls',cur_cls)
         assert class_label == cur_cls
         pseudo_memory_c = []
         for shift in tqdm(range(args.num_samples // batch_size)):

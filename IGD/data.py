@@ -246,10 +246,20 @@ class ImageFolder_mp(datasets.DatasetFolder):
         else:
             self.classes, self.class_to_idx = self.find_classes(self.root)
         self.original_labels = self.find_original_classes()
+        self.sel_class = sel_class
         # self.nclass = nclass
         self.nclass = len(self.class_to_idx.keys())
         self.samples = datasets.folder.make_dataset(self.root, self.class_to_idx, self.extensions,
                                                     is_valid_file)
+        # 计算真实索引
+        self.sel_class_global_idx = -1
+        if self.sel_class != 'none':
+            try:
+                all_classes_sorted = sorted(os.listdir(self.root))
+                if self.sel_class in all_classes_sorted:
+                    self.sel_class_global_idx = all_classes_sorted.index(self.sel_class)
+            except Exception as e:
+                print(f"Warning: Could not determine global index for {self.sel_class}: {e}")
 
         # if ipc > 0:
         #     self.samples = self._subset(slct_type=slct_type, ipc=ipc)
@@ -369,6 +379,8 @@ class ImageFolder_mp(datasets.DatasetFolder):
             target = self.target_transform(target)
             original_target = self.target_transform(original_target)
 
+        if self.sel_class != 'none' and self.sel_class_global_idx != -1:
+            original_target = self.sel_class_global_idx
         # Return original labels for DiT generation
         if self.return_origin:
             return sample, target, original_target

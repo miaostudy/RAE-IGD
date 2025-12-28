@@ -40,13 +40,19 @@ python scripts/download.py
 1. 并没有实现 **Choosing representative checkpoints via gradient similarity**：
    
     在训练代理模型的时候，保存了完整的50个epoch的模型参数。在采样的时候直接**人为指定加载哪些epoch的参数**，比如`convnet6`就加载`idxs = [0,5,18,52]`时的代理模型参数来进行引导。
-2. 论文里各个位置说的都是训练50个epoch，在加载idx的时候加载了52。
+2. 论文里各个位置说的都是训练50个epoch，在加载idx的时候加载了52。我把这里改成了50。
 
 
 ckpt自己就只有30%左右的准确率，用它来算梯度引导采样，是不是不好
 
+这一步需要在A6000上需要5天左右。。。用autodl是1天左右
 ![](https://youke2.picui.cn/s1/2025/12/28/6950d98f2e617.png)
+
+采样需要50h左右
+
 ### MiniMax
+这个模型训练8个epoch需要6个小时左右
+
 IGD的imagenet1k基于与训练的Minimax模型，但是两者均未给出checkpoint，需要自己训练。
 
 
@@ -58,6 +64,8 @@ torchrun --nnode=1 --nproc_per_node=2 --master_port=25678 MinimaxDiffusion/train
 
 ## DMVAE
 ### tokenizer
+这一步需要训练3天左右，已训练好
+
 需要重新组织一些imagenet的验证集，变成ImageFolder的结构
 cd到imagenet的路径中
 ```shell
