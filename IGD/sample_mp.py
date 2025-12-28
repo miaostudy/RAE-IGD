@@ -144,7 +144,7 @@ def rand_ckpts(args):
     elif  args.spec == '1k':
         if args.ckpt_path.startswith('ckpt'):
             if args.net_type == 'convnet6':
-                idxs = [0,5,18,52]
+                idxs = [0,5,18,50]
 
     # select_idxs = np.arange(0, len(ckpts), 20).tolist()
     # # select_idxs = np.random.choice(int(len(ckpts)*0.6),size=5)

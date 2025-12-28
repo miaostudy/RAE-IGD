@@ -11,8 +11,8 @@ nsample=10
 ntype=convnet6
 gamma=100
 phase=0 # end 7
-nclass=10
-tart_ncls=10
+nclass=1000
+tart_ncls=1000
 d=6
 
 python IGD/sample_mp.py --model DiT-XL/2 --image-size 256 --ckpt logs/run-0/002-DiT-XL-2-minimax/checkpoints/0012000.pt \
