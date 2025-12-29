@@ -268,8 +268,8 @@ def main(args):
     cls_from = args.nclass * phase # 0
     cls_to = args.nclass * (phase + 1) # 1000
     sel_classes = sel_classes[cls_from:cls_to]
-    sel_classes = [sel_class.strip() for sel_class in sel_classes]
-    class_labels = [] # ['n01440764', ...]
+    sel_classes = [sel_class.strip() for sel_class in sel_classes]# ['n01440764', ...]
+    class_labels = [] # [0, 1, 2...]
     
     for sel_class in sel_classes:
         class_labels.append(all_classes.index(sel_class)) # 0-1000
@@ -280,7 +280,9 @@ def main(args):
         assert args.num_classes == 1000
 
     # Load model:
-    latent_size = args.image_size // 8
+    latent_size = args.image_size // 8 # 32
+
+    # 定义模型：DIT 32,1000
     model = DiT_models[args.model](
         input_size=latent_size,
         num_classes=args.num_classes

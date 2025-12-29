@@ -48,7 +48,9 @@ ckpt自己就只有30%左右的准确率，用它来算梯度引导采样，是�
 这一步需要在A6000上需要5天左右。。。用autodl是1天左右
 ![](https://youke2.picui.cn/s1/2025/12/28/6950d98f2e617.png)
 
-采样需要50h左右
+采样需要50h左右，预计还要两天两夜
+
+![](https://youke2.picui.cn/s1/2025/12/29/6951f6eeea43e.png)
 
 ### MiniMax
 这个模型训练8个epoch需要6个小时左右
@@ -56,7 +58,7 @@ ckpt自己就只有30%左右的准确率，用它来算梯度引导采样，是�
 IGD的imagenet1k基于与训练的Minimax模型，但是两者均未给出checkpoint，需要自己训练。
 
 
-![](https://youke2.picui.cn/s1/2025/12/28/6950daa6e50ae.png)
+![1](https://youke2.picui.cn/s1/2025/12/28/6950daa6e50ae.png)
 单机双卡：
 ```shell
 torchrun --nnode=1 --nproc_per_node=2 --master_port=25678 MinimaxDiffusion/train_dit.py --model DiT-XL/2   --data-path /data2/wlf/datasets/imagenet/train/ --ckpt pretrained_models/DiT-XL-2-256x256.pt --global-batch-size 8 --tag minimax --ckpt-every 12000 --log-every 1500 --epochs 8 --condense --finetune-ipc -1 --results-dir logs/run-0 --spec 1k
@@ -88,16 +90,12 @@ export LD_LIBRARY_PATH=/root/miniconda3/envs/raeigd/lib/python3.12/site-packages
 |----------------|-----|----------------|-------------------|
 | RAE            | 10  | 78%            | 0.5428%           |
 |                | 50  | 69.4           | 31%               |
-|                | 100 | -              | -                 |
 | IGD            | 10  |                |                   |
 |                | 50  |                |                   |
-|                | 100 |                |                   |
 | DM-VAE         | 10  |                |                   |
 |                | 50  |                |                   |
-|                | 100 |                |                   |
 | RAE+IGD(fixed) | 10  |                |                   |
 |                | 50  |                |                   |
-|                | 100 |                |                   |
 
 
 ![curve_0.png](https://youke2.picui.cn/s1/2025/12/16/6940c018cb9aa.png)
@@ -106,5 +104,13 @@ export LD_LIBRARY_PATH=/root/miniconda3/envs/raeigd/lib/python3.12/site-packages
 ```shell
 python IGD/train.py -d imagenet --imagenet_dir imagenet/ipc_50/ /data2/wlf/datasets/imagenet/ -n resnet --depth 10 --nclass 1000 --norm_type instance --ipc 50 --tag test --slct_type random --spec 1k --batch_size 128 --verbose
 ```
+# DMVAE采样
 
 # 改进位置
+
+# TODO
+1. 等待IGD(fixed)、RAE+IGD(fixed)采样完成，可能还需要2天跑完。
+2. 测试, 每一个都需要跑1天
+3. t-sne、模型注意的位置，需要采样完后来跑
+4. VMVAE-IGD，需要改
+

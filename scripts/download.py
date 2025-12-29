@@ -7,7 +7,7 @@ import argparse
 os.environ['http_proxy'] = 'http://127.0.0.1:7890'
 os.environ['https_proxy'] = 'http://127.0.0.1:7890'
 
-pretrained_models = ['sen-ye/dmvae', 'nyu-visionx/RAE-collections', 'DiT-XL-2-512x512.pt', 'DiT-XL-2-256x256.pt']
+pretrained_models = ['DiT-XL-2-256x256.pt', 'sen-ye/dmvae', 'nyu-visionx/RAE-collections', 'DiT-XL-2-512x512.pt']
 
 
 def find_model(model_name, args):
