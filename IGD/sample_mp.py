@@ -275,6 +275,14 @@ def main(args):
         file_list = 'IGD/misc/class_nette.txt'
     elif args.spec == '1k':
         file_list = 'IGD/misc/class_indices.txt'
+    elif args.spec == 'cifar10':
+        cifar_classes = [str(i) for i in range(10)]
+        phase = max(0, args.phase)
+        cls_from = args.nclass * phase
+        cls_to = args.nclass * (phase + 1)
+        sel_classes = cifar_classes[cls_from:cls_to]
+        class_labels = [int(x) for x in sel_classes]
+        print(f"Sampling CIFAR-10 classes: {sel_classes}")
     else:
         file_list = 'IGD/misc/class100.txt'
     with open(file_list, 'r') as fp:
