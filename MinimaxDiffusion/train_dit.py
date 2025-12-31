@@ -21,7 +21,7 @@ import argparse
 import logging
 import os
 
-from data import ImageFolder
+from data import ImageFolder, CIFAR10_mp
 from models import DiT_models
 from download import find_model
 from diffusion import create_diffusion
@@ -195,9 +195,17 @@ def main(args):
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
     ])
-    dataset = ImageFolder(args.data_path, transform=transform, nclass=args.nclass,
-                          ipc=args.finetune_ipc, spec=args.spec, phase=args.phase,
-                          seed=0, return_origin=True)
+    # dataset = ImageFolder(args.data_path, transform=transform, nclass=args.nclass,
+    #                       ipc=args.finetune_ipc, spec=args.spec, phase=args.phase,
+    #                       seed=0, return_origin=True)
+    if args.dataset == 'cifar10':
+        dataset = CIFAR10_mp(args.data_path, transform=transform, nclass=args.nclass,
+                             ipc=args.finetune_ipc, spec=args.spec, phase=args.phase,
+                             seed=0, return_origin=True)
+    else:
+        dataset = ImageFolder(args.data_path, transform=transform, nclass=args.nclass,
+                              ipc=args.finetune_ipc, spec=args.spec, phase=args.phase,
+                              seed=0, return_origin=True)
     sampler = DistributedSampler(
         dataset,
         num_replicas=dist.get_world_size(),
@@ -362,5 +370,6 @@ if __name__ == "__main__":
     parser.add_argument('--lambda-neg', default=0.008, type=float, help='weight for diversity constraint')
     parser.add_argument("--memory-size", type=int, default=64, help='the memory size')
     parser.add_argument("--phase", type=int, default=0, help='the phase number for generating large datasets')
+    parser.add_argument("--dataset", type=str, default='imagenet', help='dataset name')  # <--- 添加这一行
     args = parser.parse_args()
     main(args)
