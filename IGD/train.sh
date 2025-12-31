@@ -12,4 +12,6 @@ python IGD/train.py -d imagenet --imagenet_dir ../imagenet /data2/wlf/datasets/i
 
 python IGD/train.py -d imagenet --imagenet_dir imagenet/ipc_10 /data2/wlf/datasets/imagenet/ -n resnet --depth 10 --nclass 1000 --norm_type instance --ipc 10 --tag test --slct_type random --spec 1k --batch_size 128 --verbose
 
+python IGD/train.py -d imagenet --imagenet_dir results/dit-distillation/nette-10-minimax-igd-ckpts-resnet-k15-gamma10-r1-gi200-low30-high45/ /data/wlf/datasets/imagenette/ -n resnet --depth 10 --nclass 10 --norm_type instance --ipc 10 --tag test --slct_type random --spec nette --batch_size 128 --verbose
+
 

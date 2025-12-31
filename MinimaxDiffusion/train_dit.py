@@ -206,6 +206,7 @@ def main(args):
                              ipc=args.finetune_ipc, spec=args.spec, phase=args.phase,
                              seed=0, return_origin=True)
     else:
+        print(args.data_path)
         dataset = ImageFolder(args.data_path, transform=transform, nclass=args.nclass,
                               ipc=args.finetune_ipc, spec=args.spec, phase=args.phase,
                               seed=0, return_origin=True)
