@@ -1,6 +1,7 @@
 import torch
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
+from PIL import Image
 from torchvision.utils import save_image
 import torch.nn.functional as F
 import os
