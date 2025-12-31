@@ -105,7 +105,7 @@ def define_model(args, nclass, logger=None, size=None):
     return model
 
 def rand_ckpts(args):
-    expert_path = './%s/%s/%s/'%(args.ckpt_path, args.spec, args.net_type)
+    expert_path = './%s/%s/%s%s/'%(args.ckpt_path, args.spec,args.depth,args.net_type) #ckpt 路径./ckps/cifar10/resnet10
     expert_files = os.listdir(expert_path)
     # rand_id1 = np.random.choice(len(expert_files))
     rand_id1 = 0
@@ -145,6 +145,15 @@ def rand_ckpts(args):
         if args.ckpt_path.startswith('ckpt'):
             if args.net_type == 'convnet6':
                 idxs = [0,5,18,50]
+
+    elif  args.spec == 'cifar10':
+        if args.ckpt_path.startswith('ckpt'):
+            if args.net_type == 'convnet6':
+                idxs = [0,5,18,50]
+            elif args.net_type == 'resnet_ap':
+                idxs = [0,6,16,39]
+            elif args.net_type == 'resnet':
+                idxs = [0,8,27]
 
     # select_idxs = np.arange(0, len(ckpts), 20).tolist()
     # # select_idxs = np.random.choice(int(len(ckpts)*0.6),size=5)
