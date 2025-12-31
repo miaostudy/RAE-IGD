@@ -264,42 +264,47 @@ def main(args):
     torch.manual_seed(args.seed)
     # torch.set_grad_enabled(False)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    file_list = None
-    # Labels to condition the model
-    with open('IGD/misc/class_indices.txt', 'r') as fp:
-        all_classes = fp.readlines()
-    all_classes = [class_index.strip() for class_index in all_classes]
-    if args.spec == 'woof':
-        file_list = 'IGD/misc/class_woof.txt'
-    elif args.spec == 'nette':
-        file_list = 'IGD/misc/class_nette.txt'
-    elif args.spec == '1k':
-        file_list = 'IGD/misc/class_indices.txt'
-    elif args.spec == 'cifar10':
-        cifar_classes = [str(i) for i in range(10)]
+    if args.spec == 'cifar10':
+        sel_classes = [str(i) for i in range(10)]
+
         phase = max(0, args.phase)
         cls_from = args.nclass * phase
         cls_to = args.nclass * (phase + 1)
-        sel_classes = cifar_classes[cls_from:cls_to]
+
+        sel_classes = sel_classes[cls_from:cls_to]
+        # 直接由字符串转为整数，不需要 index() 查找
         class_labels = [int(x) for x in sel_classes]
+
         print(f"Sampling CIFAR-10 classes: {sel_classes}")
+        print(f"Class labels (indices): {class_labels}")
+
     else:
-        file_list = 'IGD/misc/class100.txt'
+        with open('IGD/misc/class_indices.txt', 'r') as fp:
+            all_classes = fp.readlines()
+        all_classes = [class_index.strip() for class_index in all_classes]
 
-    if file_list is not None:
+        if args.spec == 'woof':
+            file_list = 'IGD/misc/class_woof.txt'
+        elif args.spec == 'nette':
+            file_list = 'IGD/misc/class_nette.txt'
+        elif args.spec == '1k':
+            file_list = 'IGD/misc/class_indices.txt'
+        else:
+            file_list = 'IGD/misc/class100.txt'
+
         with open(file_list, 'r') as fp:
-            sel_classes = fp.readlines()
+            sel_classes_raw = fp.readlines()
 
-    phase = max(0, args.phase) # 0
-    cls_from = args.nclass * phase # 0
-    cls_to = args.nclass * (phase + 1) # 1000
-    sel_classes = sel_classes[cls_from:cls_to]
-    sel_classes = [sel_class.strip() for sel_class in sel_classes]# ['n01440764', ...]
-    class_labels = [] # [0, 1, 2...]
-    
-    for sel_class in sel_classes:
-        class_labels.append(all_classes.index(sel_class)) # 0-1000
+        phase = max(0, args.phase)
+        cls_from = args.nclass * phase
+        cls_to = args.nclass * (phase + 1)
 
+        sel_classes = [s.strip() for s in sel_classes_raw[cls_from:cls_to]]
+
+        class_labels = []
+        for sel_class in sel_classes:
+            # 只有这里需要用到 all_classes.index
+            class_labels.append(all_classes.index(sel_class))
     if args.ckpt is None:
         assert args.model == "DiT-XL/2", "Only DiT-XL/2 models are available for auto-download."
         assert args.image_size in [256, 512]
