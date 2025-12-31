@@ -264,7 +264,7 @@ def main(args):
     torch.manual_seed(args.seed)
     # torch.set_grad_enabled(False)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-
+    file_list = None
     # Labels to condition the model
     with open('IGD/misc/class_indices.txt', 'r') as fp:
         all_classes = fp.readlines()
@@ -285,8 +285,10 @@ def main(args):
         print(f"Sampling CIFAR-10 classes: {sel_classes}")
     else:
         file_list = 'IGD/misc/class100.txt'
-    with open(file_list, 'r') as fp:
-        sel_classes = fp.readlines()
+
+    if file_list is not None:
+        with open(file_list, 'r') as fp:
+            sel_classes = fp.readlines()
 
     phase = max(0, args.phase) # 0
     cls_from = args.nclass * phase # 0
