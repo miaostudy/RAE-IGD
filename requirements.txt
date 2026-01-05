@@ -13,4 +13,5 @@ omegaconf
 fairscale
 safetensors
 torchdiffeq
-git+https://github.com/LTH14/torch-fidelity.git@master#egg=torch-fidelity
+torch-fidelity
+pytz
