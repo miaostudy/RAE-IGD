@@ -1,8 +1,8 @@
 import os
 import torch
 from torch import nn
-from DMVAE.models.init_param import init_weights
-from DMVAE.models.flux_ae import *
+from DMVAE.dmvae_models.init_param import init_weights
+from DMVAE.dmvae_models.flux_ae import *
 from contextlib import nullcontext
 from timm.models import create_model
 
