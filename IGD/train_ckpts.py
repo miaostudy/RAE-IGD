@@ -17,16 +17,9 @@ from data import load_data, MEANS, STDS
 from misc.utils import random_indices, rand_bbox, AverageMeter, accuracy, get_time, Plotter
 from efficientnet_pytorch import EfficientNet
 import warnings
-from tqdm import tqdm, trange  # 新增：导入tqdm进度条库
-
-# --- 新增: 尝试导入 DMVAE 中的 dinov2 ---
-try:
-    # 假设 DMVAE 和 IGD 在同一级目录下
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-    from DMVAE.models.dinov2 import vit_small, vit_base, vit_large
-except ImportError:
-    print("Warning: Could not import DMVAE.models.dinov2. ensure DMVAE directory is accessible.")
-# --------------------------------------
+from tqdm import tqdm, trange
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from DMVAE.models.dinov2 import vit_small, vit_base, vit_large
 
 device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
 os.environ['CUDA_VISIBLE_DEVICES'] = "1"
@@ -81,9 +74,7 @@ def define_model(args, nclass, logger=None, size=None):
         model = CN.ConvNet(channel=args.nch, num_classes=nclass, net_width=128, net_depth=4,
                            net_act='relu', net_norm='instancenorm', net_pooling='avgpooling',
                            im_size=(args.size, args.size))
-    # --- 新增: Dinov2 支持 ---
     elif args.net_type.startswith('dinov2'):
-        # 针对小图数据集调整 patch_size
         p_size = 14  # dinov2 默认常用
         if size <= 32:
             p_size = 2  # cifar 32x32 太小了，使用极小 patch
@@ -95,7 +86,7 @@ def define_model(args, nclass, logger=None, size=None):
             model = vit_base(img_size=size, patch_size=p_size, in_chans=args.nch)
         elif 'large' in args.net_type:
             model = vit_large(img_size=size, patch_size=p_size, in_chans=args.nch)
-        else:  # default to small
+        else:
             model = vit_small(img_size=size, patch_size=p_size, in_chans=args.nch)
 
         # Dinov2 默认 head 是 Identity，替换为 Linear 分类头
