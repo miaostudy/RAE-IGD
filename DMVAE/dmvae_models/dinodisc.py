@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from torch.nn.utils.spectral_norm import SpectralNorm
 from torchvision.transforms import RandomCrop
 import DMVAE.dmvae_models.dinov2
-from utils import dist
+from DMVAE.utils import dist
 
 
 class ResidualBlock(nn.Module):
