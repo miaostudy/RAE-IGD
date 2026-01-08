@@ -433,7 +433,8 @@ if args.ipc > 0:
         #     # args.epochs = ipc_epoch(args.ipc, args.factor, args.nclass, bound=args.batch_syn_max)
         # else:
             # args.epochs = ipc_epoch(args.ipc, args.factor, args.nclass)
-        args.epoch_print_freq = args.epochs // 100
+        # args.epoch_print_freq = args.epochs // 100
+        pass
     else:
         args.epochs = 1000
         args.epoch_print_freq = args.epochs
