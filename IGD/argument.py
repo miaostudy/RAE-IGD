@@ -434,7 +434,8 @@ if args.ipc > 0:
         # else:
             # args.epochs = ipc_epoch(args.ipc, args.factor, args.nclass)
         # args.epoch_print_freq = args.epochs // 100
-        pass
+        args.epoch_print_freq = 20
+        # pass
     else:
         args.epochs = 1000
         args.epoch_print_freq = args.epochs
