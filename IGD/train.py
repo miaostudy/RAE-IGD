@@ -359,6 +359,8 @@ if __name__ == '__main__':
     # seeds = list(range(5)) 
     seeds = list(range(5))
     print('seeds:', seeds)
+    print('repeat:', args.repeat)
+    print('epochs:', args.epochs)
     accs = []
     for s in seeds:
         args.seed = s
