@@ -565,7 +565,7 @@ class GaussianDiffusion:
                     model_kwargs['gm_resource'][6] = model_kwargs['gm_resource'][7]
 
 
-        # latent gudience
+        # latent gudience.md
         elif model_kwargs['gen_type'] == 'igd_latent' and instep_latent:
             # Base sample calculation
             sample = out["mean"].detach().data + nonzero_mask * th.exp(0.5 * out["log_variance"]) * noise

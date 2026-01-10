@@ -10,3 +10,8 @@ python IGD/sample2.py \
   --low 100 \
   --save-dir ./results/igd_time_window \
   --num-samples 10
+
+
+在这种情况下，准确率：60%
+
+
